@@ -1,0 +1,179 @@
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+from datetime import datetime
+import plotly.express as px
+
+st.set_page_config(layout="wide")
+
+#Création de contenant
+
+col1, col2, col3 = st.beta_columns([3,6,3])
+
+with col1:
+    st.write("")
+
+with col2:
+    st.title('Chiffres clés - Vente de jeux vidéo "Monde"')
+
+    st.image("https://www.usinenouvelle.com/mediatheque/9/8/2/000847289_624x337_c.jpg")
+
+with col3:
+    st.write("")
+
+    
+#importer doc
+
+df = pd.read_csv('vgsales_brut.csv', sep=",")
+
+df1 = df.melt(
+    id_vars=["Rank", "Name", "Platform", "Year", "Genre", "Publisher"], 
+      var_name="Region", 
+      value_name="Sales"
+).sort_values('Name')
+
+# df2 = pd.DataFrame(index=np.arange(0,1),  columns=['Rank', 'Name','Platform','Year','Genre','Publisher','NA_Sales','EU_Sales','JP_Sales','Other_Sales','Global_Sales'])
+# interval = [1980,2020]
+# print(df2)
+
+# for index, row in df.iterrows():
+#   current_row = row
+#   year = current_row['Year']
+#   if year >= interval[0] and year <= interval[1]:
+#     df2.append(current_row)
+
+# print(df2)
+
+color_videogames = ['#53C6E2', '#4060c0', '#6080c0', '#CDBE6A']
+
+# st.write(df.columns)
+
+#Sélection périmètre
+
+st.subheader("Quel Publisher prioriser pour un partenariat, selon sa notoriété par région du monde ?")
+
+#Dates
+
+start_range = 1980
+end_range = 2020
+
+date_range = st.slider('Sélectionnez l\'intervalle de temps considéré :',
+    min_value=start_range,
+    value=(start_range, end_range),
+    max_value=end_range,
+    )
+
+start_range, end_range = date_range
+
+"""Filtre par région"""
+
+choices = st.multiselect(
+    label = 'Sélectionner les catégories de Region :',
+    default=None,
+    options=df1["Region"][:5],
+    help = 'Cliquez sur la croix pour en supprimer ou slectionnez pour ajouter'
+    )
+
+# st.write('Vous avez choisi : ')
+# st.write(choices)
+
+
+left_block, right_block = st.columns([1, 1])
+
+with left_block:
+
+    st.caption("Top 5 : Chiffre d'affaire réalisé par Publisher")
+
+    CA_Publisher = df[['Publisher', 'Global_Sales', 'Year']].groupby(['Publisher']) \
+                      .agg('sum') \
+                      .sort_values(by='Global_Sales', ascending=False)
+    CA_Publisher.reset_index(inplace=True)
+
+    fig = px.pie(CA_Publisher[:5], values="Global_Sales", names="Publisher", color_discrete_sequence=color_videogames)
+    st.plotly_chart(fig)  
+    with st.expander("Voir explication"):
+        st.write("Dans ce graphique en camembert, vous pourrez apprécier le top 5 des éditeurs selon leurs ventes globals, toutes régions confondues")
+        st.image("http://www.formatcourt.com/wp-content/uploads/2015/12/top5.png")
+
+    st.caption("Top 5 : Chiffre d'affaire réalisé par Publisher selon la région")
+
+
+    Publisher_region = df1[['Sales', 'Region', 'Publisher']].groupby(['Region','Publisher']) \
+                      .agg('sum') \
+                      .sort_values(by='Sales', ascending=False)
+    Publisher_region.reset_index(inplace=True)
+
+    fig2 = px.bar(Publisher_region, \
+             x='Sales', \
+             y='Publisher', \
+             color ='Region',
+             orientation='h',
+             color_discrete_sequence=color_videogames)
+    fig2.update_yaxes(autorange='reversed')
+    fig2.update_layout(font_size=12, title_font_size=24)
+    st.plotly_chart(fig2)
+
+with right_block :
+
+    st.caption("Top 5 : Chiffre d'affaire réalisé par Plateforme")
+
+    with st.container():
+
+        CA_Platform = df[['Platform', 'Global_Sales', 'Year']].groupby(['Platform']) \
+                      .agg('sum') \
+                      .sort_values(by='Global_Sales', ascending=False)
+        CA_Platform.reset_index(inplace=True)
+
+        fig3 = px.pie(CA_Platform[:5], values="Global_Sales", names="Platform", color_discrete_sequence=color_videogames)
+        st.plotly_chart(fig3)
+        with st.expander("Voir explication"):
+            st.write("Dans ce graphique en camembert, vous pourrez apprécier le top 5 des Plateformes selon le CA réalisé, toutes régions confondues")
+            st.image("http://www.formatcourt.com/wp-content/uploads/2015/12/top5.png")
+
+    st.caption("Top : Chiffre d'affaire réalisé par Plateforme selon la région")
+
+    with st.container():
+
+        Platform_region = df1[['Sales', 'Region', 'Platform']].groupby(['Region','Platform']) \
+                      .agg('sum') \
+                      .sort_values(by='Sales', ascending=False)
+        Platform_region.reset_index(inplace=True)
+
+        # print(Platform_region)
+
+        fig4 = px.bar(Platform_region, \
+              x='Sales', \
+             y='Platform', \
+             color='Region', \
+             color_discrete_sequence=color_videogames)
+        st.plotly_chart(fig4)
+
+column1, column2, column3 = st.beta_columns([1,2,1])
+
+with column1:
+    st.write("")
+
+with column2:
+
+    st.caption("Top : Chiffre d'affaire réalisé par Type de jeux selon la région")
+
+    Genre_Region = df1[['Sales', 'Region', 'Genre','Year']].groupby(['Region','Genre']) \
+                      .agg('sum') \
+                      .sort_values(by='Sales', ascending=False)
+    Genre_Region.reset_index(inplace=True)
+
+
+    fig5 = px.bar(Genre_Region, \
+             x='Genre', \
+             y='Sales', \
+             labels={'Sales': 'Nombre de produits', 'Genre': 'Type de jeux', 'Region': 'Région du monde'},
+             color_discrete_sequence=color_videogames,
+             color='Region',
+             barmode='group')
+
+    st.plotly_chart(fig5)
+
+with column3:
+    st.write("")
+
+st.text('By FUENTES Raphaël, Data analyst')
